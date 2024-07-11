@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lba2pba-manager
+  namespace: storage-controller
+  labels:
+    name: lba2pba-manager
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 40302
+    targetPort: 40302
+    nodePort: 30302
+    protocol: TCP
+  selector:
+    app: lba2pba-manager
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lba2pba-manager
+  namespace: storage-controller
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: lba2pba-manager
+  namespace: storage-controller
+subjects:
+- kind: ServiceAccount
+  name: lba2pba-manager
+  namespace: storage-controller
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: lba2pba-manager
+  name: lba2pba-manager
+  namespace: storage-controller
+spec:
+  selector:
+    matchLabels:
+      app: lba2pba-manager
+  template:
+    metadata:
+      labels:
+        app: lba2pba-manager
+      name: lba2pba-manager
+    spec:
+      nodeSelector:
+        layer: storage
+        type: csd
+      serviceAccountName: lba2pba-manager
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: lba2pba-manager
+          image: ketidevit2/lba2pba-manager:v1.0
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: sst-mount
+              mountPath: /mnt
+          resources:
+            limits:
+              memory: "200Mi"
+            requests:
+              memory: "200Mi"
+          env:
+          - name: LOG_LEVEL
+            value: "INFO"
+      volumes:
+        - name: sst-mount
+          hostPath:
+            path: /mnt
