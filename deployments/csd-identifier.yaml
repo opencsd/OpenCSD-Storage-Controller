@@ -75,7 +75,7 @@ spec:
               memory: "200Mi"
           env:
           - name: LOG_LEVEL
-            value: "INFO"
+            value: "TRACE"
       volumes:
         - name: tz-config
           hostPath:
