@@ -82,6 +82,10 @@ spec:
               value: keti
             - name: INFLUXDB_PORT
               value: "8086"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           volumeMounts:
             - name: proc-volume
               mountPath: /proc
