@@ -1,0 +1,4 @@
+storage-node1 8
+storage-node2 8
+storage-node3 6
+storage-node4 0

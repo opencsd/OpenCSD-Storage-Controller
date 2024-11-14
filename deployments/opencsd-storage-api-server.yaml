@@ -1,10 +1,9 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: opencsd-storage-api-server
   namespace: storage-controller
 spec:
-  replicas: 1
   selector:
     matchLabels:
       name: opencsd-storage-api-server
@@ -12,43 +11,32 @@ spec:
     metadata:
       labels:
         name: opencsd-storage-api-server
+        namespace: storage-controller
     spec:
+      hostNetwork: true
       nodeSelector:
         layer: storage
-        type: csd
       imagePullSecrets:
         - name: regcred
       containers:
         - name: opencsd-storage-api-server
-          image: ketidevit2/opencsd-storage-api-server:v0.0.1
+          image: ketidevit2/opencsd-storage-api-server:v1.0
           command:
           - opencsd-storage-api-server
           imagePullPolicy: Always
           env:
-            - name: WATCH_NAMESPACE
-              value: ""
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: INFLUX_IP
-              value: "10.0.4.85"
-            - name: INFLUX_PORT
-              value: "30002"
-            - name: INFLUX_USERNAME
-              value: "keti"
-            - name: INFLUX_PASSWORD
-              value: "ketilinux"
-            - name: MYSQL_IP
-              value: "10.0.4.85"
-            - name: MYSQL_PORT
-              value: "30001"
-            - name: MYSQL_USERNAME
-              value: "root"
-            - name: MYSQL_PASSWORD
-              value: "ketilinux"
-            - name: OPERATOR_NAME
-              value: "opencsd-storage-api-server"
+            - name: STORAGE_METRIC_COLLECTOR_PORT_HTTP
+              value: "40307"
+            - name: STORAGE_API_SERVER_PORT
+              value: "40306"
+            - name: INFLUXDB_DB
+              value: opencsd_storage_metric_db
+            - name: INFLUXDB_PASSWORD
+              value: ketilinux
+            - name: INFLUXDB_USER
+              value: keti
+            - name: INFLUXDB_PORT
+              value: "8086"
       tolerations:
         - key: node.kubernetes.io/not-ready
           effect: NoExecute
@@ -56,20 +44,20 @@ spec:
         - key: node.kubernetes.io/unreachable
           effect: NoExecute
           tolerationSeconds: 0
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: opencsd-storage-api-server
-  namespace: storage-controller
-  labels:
-    name: opencsd-storage-api-server
-spec:
-  type: NodePort
-  ports:
-  - port: 40306
-    targetPort: 40306
-    nodePort: 30306
-    protocol: TCP
-  selector:
-    name: opencsd-storage-api-server
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: opencsd-storage-api-server-svc
+#   namespace: storage-controller
+# spec:
+#   type: NodePort
+#   selector:
+#     name: opencsd-storage-api-server
+#     namespace: storage-controller
+#   ports:
+#     - protocol: TCP
+#       port: 40306  
+#       targetPort: 40306 
+#       nodePort: 30306  
+#   externalTrafficPolicy: Local

@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: storage-metric-initdb-config
+  namespace: storage-controller
+data:
+  initdb.sh: |
+    #!/bin/sh
+    influx -execute "CREATE DATABASE opencsd_storage_metric_db"
+    influx -execute "CREATE RETENTION POLICY 'day_policy' ON 'opencsd_storage_metric_db' DURATION 1d REPLICATION 1 DEFAULT"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lspci-config
+  namespace: storage-controller
+data:
+  lspci: |
+    storage-node1 8
+    storage-node2 8
+    storage-node3 6
+    storage-node4 0
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: storage-metric-collector
+  namespace: storage-controller
+spec:
+  selector:
+    matchLabels:
+      name: storage-metric-collector
+      namespace: storage-controller
+  template:
+    metadata:
+      labels:
+        name: storage-metric-collector
+        namespace: storage-controller
+    spec:
+      nodeSelector:
+        layer: storage
+      serviceAccountName: storage-metric-collector
+      imagePullSecrets:
+        - name: regcred
+      hostNetwork: true
+      containers:
+        - name: influxdb
+          image: influxdb:1.7
+          ports:
+            - containerPort: 8086 
+          env:
+            - name: INFLUXDB_DB
+              value: opencsd_storage_metric_db
+            - name: INFLUXDB_PASSWORD
+              value: ketilinux
+            - name: INFLUXDB_USER
+              value: keti
+          volumeMounts:
+            - name: influxdb-storage
+              mountPath: /var/lib/influxdb
+            - name: storage-metric-db-entrypoint
+              mountPath: /docker-entrypoint-initdb.d
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "500m" 
+        - name: storage-metric-collector
+          image: ketidevit2/storage-metric-collector:v1.0
+          imagePullPolicy: Always
+          securityContext:
+            privileged: true
+          env:
+            - name: STORAGE_METRIC_COLLECTOR_PORT_TCP
+              value: "40304"
+            - name: STORAGE_METRIC_COLLECTOR_PORT_HTTP
+              value: "40307"
+            - name: INFLUXDB_DB
+              value: opencsd_storage_metric_db
+            - name: INFLUXDB_PASSWORD
+              value: ketilinux
+            - name: INFLUXDB_USER
+              value: keti
+            - name: INFLUXDB_PORT
+              value: "8086"
+          volumeMounts:
+            - name: proc-volume
+              mountPath: /proc
+            - name: net-volume
+              mountPath: /sys/class/net/eno1
+            - name: power-volume
+              mountPath: /sys/class/powercap
+            - name: dev-volume
+              mountPath: /dev
+            - name: lspci-volume
+              mountPath: /etc/lspci-result.txt
+              subPath: lspci
+      volumes:
+        - name: proc-volume
+          hostPath:
+            path: /proc
+        - name: net-volume
+          hostPath:
+            path: /sys/class/net/eno1
+        - name: power-volume     
+          hostPath:
+            path: /sys/class/powercap
+        - name: dev-volume
+          hostPath:
+            path: /dev
+        - name: lspci-volume
+          configMap:
+            name: lspci-config
+            defaultMode: 0755
+        - name: influxdb-storage
+          hostPath:
+            path: /mnt/influxdb
+        - name: storage-metric-db-entrypoint
+          configMap:
+            name: storage-metric-initdb-config
+            defaultMode: 0755
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: storage-metric-collector
+  namespace: storage-controller
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: storage-metric-collector
+subjects:
+- kind: ServiceAccount
+  name: storage-metric-collector
+  namespace: storage-controller
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: storage-metric-collector-svc
+  namespace: storage-controller
+spec:
+  clusterIP: None
+  selector:
+    name: storage-metric-collector
+    namespace: storage-controller
+  ports:
+    - protocol: TCP
+      port: 40307  
+      targetPort: 40307 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb-svc
+  namespace: storage-controller
+spec:
+  clusterIP: None
+  selector:
+    name: storage-metric-collector
+    namespace: storage-controller
+  ports:
+    - protocol: TCP
+      port: 8086  
+      targetPort: 8086 
