@@ -25,10 +25,6 @@ spec:
           - opencsd-storage-api-server
           imagePullPolicy: Always
           env:
-            - name: STORAGE_METRIC_COLLECTOR_PORT_HTTP
-              value: "40307"
-            - name: STORAGE_API_SERVER_PORT
-              value: "40306"
             - name: INFLUXDB_DB
               value: opencsd_storage_metric_db
             - name: INFLUXDB_PASSWORD
@@ -37,13 +33,19 @@ spec:
               value: keti
             - name: INFLUXDB_PORT
               value: "8086"
+          volumeMounts:
+            - name: host-data
+              mountPath: /mnt
+      volumes:
+      - name: host-data
+        hostPath:
+          path: /mnt
+          type: Directory
       tolerations:
-        - key: node.kubernetes.io/not-ready
-          effect: NoExecute
-          tolerationSeconds: 0
-        - key: node.kubernetes.io/unreachable
-          effect: NoExecute
-          tolerationSeconds: 0
+        - key: "use"
+          operator: "Equal"
+          value: "no"
+          effect: "NoSchedule"
 # ---
 # apiVersion: v1
 # kind: Service

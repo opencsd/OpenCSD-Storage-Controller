@@ -70,10 +70,6 @@ spec:
           securityContext:
             privileged: true
           env:
-            - name: STORAGE_METRIC_COLLECTOR_PORT_TCP
-              value: "40304"
-            - name: STORAGE_METRIC_COLLECTOR_PORT_HTTP
-              value: "40307"
             - name: INFLUXDB_DB
               value: opencsd_storage_metric_db
             - name: INFLUXDB_PASSWORD
@@ -122,6 +118,11 @@ spec:
           configMap:
             name: storage-metric-initdb-config
             defaultMode: 0755
+      tolerations:
+        - key: "use"
+          operator: "Equal"
+          value: "no"
+          effect: "NoSchedule"
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -141,33 +142,33 @@ roleRef:
   kind: ClusterRole
   name: cluster-admin
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: storage-metric-collector-svc
-  namespace: storage-controller
-spec:
-  clusterIP: None
-  selector:
-    name: storage-metric-collector
-    namespace: storage-controller
-  ports:
-    - protocol: TCP
-      port: 40307  
-      targetPort: 40307 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: influxdb-svc
-  namespace: storage-controller
-spec:
-  clusterIP: None
-  selector:
-    name: storage-metric-collector
-    namespace: storage-controller
-  ports:
-    - protocol: TCP
-      port: 8086  
-      targetPort: 8086 
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: storage-metric-collector-svc
+#   namespace: storage-controller
+# spec:
+#   clusterIP: None
+#   selector:
+#     name: storage-metric-collector
+#     namespace: storage-controller
+#   ports:
+#     - protocol: TCP
+#       port: 40307  
+#       targetPort: 40307 
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: influxdb-svc
+#   namespace: storage-controller
+# spec:
+#   clusterIP: None
+#   selector:
+#     name: storage-metric-collector
+#     namespace: storage-controller
+#   ports:
+#     - protocol: TCP
+#       port: 8086  
+#       targetPort: 8086 
