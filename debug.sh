@@ -7,13 +7,6 @@ if [ "$1" == "i" ] ; then
         PODNAME="${PODNAME:4}"
     done
     kubectl logs $PODNAME -n storage-controller -f 
-elif [ "$1" == "m" ] ; then  
-    while [ -z $PODNAME ]
-    do
-        PODNAME=`kubectl get po -o=name -A --field-selector=status.phase=Running | grep csd-metric-interface`
-        PODNAME="${PODNAME:4}"
-    done
-    kubectl logs $PODNAME -n storage-controller -f 
 elif [ "$1" == "l" ] ; then  
     while [ -z $PODNAME ]
     do
