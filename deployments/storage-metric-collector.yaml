@@ -83,30 +83,25 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           volumeMounts:
-            - name: proc-volume
-              mountPath: /proc
-            - name: net-volume
-              mountPath: /sys/class/net/eno1
-            - name: power-volume
-              mountPath: /sys/class/powercap
-            - name: dev-volume
-              mountPath: /dev
+            - name: host-proc
+              mountPath: /host/proc
+            - name: host-sys
+              mountPath: /host/sys
+            - name: host-root
+              mountPath: /rootfs
             - name: lspci-volume
               mountPath: /etc/lspci-result.txt
               subPath: lspci
       volumes:
-        - name: proc-volume
+        - name: host-proc
           hostPath:
             path: /proc
-        - name: net-volume
+        - name: host-sys
           hostPath:
-            path: /sys/class/net/eno1
-        - name: power-volume     
+            path: /sys
+        - name: host-root
           hostPath:
-            path: /sys/class/powercap
-        - name: dev-volume
-          hostPath:
-            path: /dev
+            path: /
         - name: lspci-volume
           configMap:
             name: lspci-config
